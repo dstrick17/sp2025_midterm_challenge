@@ -77,6 +77,7 @@ The grading rubric is as follows:
 * **Model Performance (40%):**
     * Performance on the primary evaluation metric.
     * Ranking on the leaderboard of at least above 0.397
+    * List the leaderboard performance, identifier and username for the best scores for each of the three parts of the assignment.
 * **Experiment Tracking and Report (30%):**
     * Comprehensive AI disclosure statement.
     * Completeness and clarity of the report.
