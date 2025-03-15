@@ -51,12 +51,19 @@ pip install -r requirements.txt
 ## Report
 
 In addition to the code, we require a short report that includes:
-  * **Model Description:** Detailed explanation of the chosen architecture, including justifications for design choices.
-  * **Hyperparameter Tuning:** Description of the hyperparameter search process and the final chosen values.
-  * **Regularization Techniques:** Explanation of the regularization methods used and their impact.
-  * **Data Augmentation Strategy:** Description of the data augmentation techniques used.
-  * **Results Analysis:** Discussion of the results, including strengths and weaknesses of the model, and potential areas for improvement.
-  * **Experiment Tracking Summary:**  Include screenshots or summaries from the experiment tracking tool.
+
+* **AI Disclosure:** You are allowed to use AI assistance for this assignment, but you are required to:
+    * Explain how you used AI, e.g. Copilot, Cursor, ChatGPT, etc.
+    * Enumerate in detail which parts of the code were written by you and which were written with AI assistance.
+    * Have detailed code comments explaining what every part of your code does. This can be in the codebase itself.
+    * **Failure to disclose how you used AI may result in a score of 0 for the assignment.**
+* **Model Description:** Detailed explanation of the chosen architecture, including justifications for design choices.
+* **Hyperparameter Tuning:** Description of the hyperparameter search process and the final chosen values.
+* **Regularization Techniques:** Explanation of the regularization methods used and their impact.
+* **Data Augmentation Strategy:** Description of the data augmentation techniques used.
+* **Results Analysis:** Discussion of the results, including strengths and weaknesses of the model, and potential areas for improvement.
+* **Experiment Tracking Summary:**  Include screenshots or summaries from the experiment tracking tool.
+  You can use the WandB Reports UI to create a report as well.
 
 ## Grading Rubric
 
@@ -71,6 +78,7 @@ The grading rubric is as follows:
     * Performance on the primary evaluation metric.
     * Ranking on the leaderboard of at least above 0.397
 * **Experiment Tracking and Report (30%):**
+    * Comprehensive AI disclosure statement.
     * Completeness and clarity of the report.
     * Thoroughness of experiment tracking.
     * Justification of design choices.
