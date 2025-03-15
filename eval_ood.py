@@ -101,6 +101,8 @@ def evaluate_ood_test(model, CONFIG):
 
 def create_ood_df(all_predictions):
 
+    distortions = [f"distortion{str(i).zfill(2)}" for i in range(19)]
+    
     # --- Create Submission File (OOD) ---
     # Create IDs for OOD (assuming the order is as evaluated)
     ids_ood = []
