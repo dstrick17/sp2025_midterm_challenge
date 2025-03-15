@@ -1,0 +1,17 @@
+# python virtual environments
+.venv/
+__pycache__/
+
+# data
+data/
+
+# wandb
+wandb/
+
+# model checkpoints
+*.pth
+experiments/
+
+# hidden files
+.DS_Store
+.vscode/

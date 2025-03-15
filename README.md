@@ -1,0 +1,83 @@
+# DS542 Deep Learning for Data Science -- Spring 2025 Midterm Challenge
+
+## Overview
+
+This repository contains the code for the midterm challenge of the course DS542 Deep Learning for Data Science.
+
+The challenge is in three parts:
+1. Define a relatively simple CNN model and train it on the CIFAR-100 dataset to
+    get a complete pipeline and establish baseline performance.
+2. Use a more sophisticated model, including predefined models from torchvision
+   to train and evaluate on CIFAR-100.
+3. Pretrain a model, or use one of the pretrained models from torchvision, and
+   fine-tune it on CIFAR-100. Try to beat the best benchmark performance on the leaderboard.
+
+For each part, submit the results to the Kaggle [leaderboard](https://www.kaggle.com/t/3551aa4f562f4b79b93204b11ae640b4).
+
+Your best result needs beat the best benchmark performance of 0.397 on the leaderboard.
+
+Use Weights and Biases experiment tracking tool to track your experiments. Create
+a free student account at [WandB](https://wandb.ai). The starter code is already
+instrumented for WandB, so it will start tracking experiments right away.
+
+You can write your report using the WandB Reports UI if you wish.
+
+## Data
+
+You will start with the CIFAR-100 dataset, which is downloaded and installed the
+first time your successfully run the sample code, `starter_code.py`.
+
+It should install into the `data/cifar-100-python` directory.
+
+We also have the challenge images in `data/ood-test` directory. Those are used
+to make predictions on the challenge images with your model and produce the 
+submission file.
+
+## Setup
+
+Fork this repository to your GitHub account and clone it to your local machine
+or to the SCC.
+
+On MacOS and Linux, you can create a virtual environment and install the
+dependencies with the following commands:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## Report
+
+In addition to the code, we require a short report that includes:
+  * **Model Description:** Detailed explanation of the chosen architecture, including justifications for design choices.
+  * **Hyperparameter Tuning:** Description of the hyperparameter search process and the final chosen values.
+  * **Regularization Techniques:** Explanation of the regularization methods used and their impact.
+  * **Data Augmentation Strategy:** Description of the data augmentation techniques used.
+  * **Results Analysis:** Discussion of the results, including strengths and weaknesses of the model, and potential areas for improvement.
+  * **Experiment Tracking Summary:**  Include screenshots or summaries from the experiment tracking tool.
+
+## Grading Rubric
+
+The grading rubric is as follows:
+
+* **Code Quality (30%):**
+    * Correctness of implementation.
+    * Readability and organization of code.
+    * Use of PyTorch best practices.
+    * Efficiency of data loading and processing.
+* **Model Performance (40%):**
+    * Performance on the primary evaluation metric.
+    * Ranking on the leaderboard of at least above 0.397
+* **Experiment Tracking and Report (30%):**
+    * Completeness and clarity of the report.
+    * Thoroughness of experiment tracking.
+    * Justification of design choices.
+    * Analysis of results.
+    * Ablation study (if included).
+
+## Bonus Points (Optional)
+
+The top 10 students on the Private leaderboard will receive bonus points.
+
