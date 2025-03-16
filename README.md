@@ -5,12 +5,19 @@
 This repository contains the code for the midterm challenge of the course DS542 Deep Learning for Data Science.
 
 The challenge is in three parts:
-1. Define a relatively simple CNN model and train it on the CIFAR-100 dataset to
+1. **Part 1 -- Simple CNN:** Define a relatively simple CNN model and train it on the CIFAR-100 dataset to
     get a complete pipeline and establish baseline performance.
-2. Use a more sophisticated model, including predefined models from torchvision
+2. **Part 2 -- More Sophisticated CNN Models:** Use a more sophisticated model, including predefined models from torchvision
    to train and evaluate on CIFAR-100.
-3. Pretrain a model, or use one of the pretrained models from torchvision, and
+3. **Part 3 -- Transfer Learning from a Pretrained Model:** Pretrain a model, or use one of the pretrained models from torchvision, and
    fine-tune it on CIFAR-100. Try to beat the best benchmark performance on the leaderboard.
+
+All your models should be built from linear and convoultional layers, as well as pooling, etc. We haven't covered Transformers yet,
+so don't use Transformer architectures.
+
+There is example starter template in `starter_code.py` which includes evaluation and submissions generation code. We suggest
+you copy and revise that code for each of the three parts above. In other words, your repo should have (at least) the three
+files, one for each part described above, as well as any supporting files.
 
 For each part, submit the results to the Kaggle [leaderboard](https://www.kaggle.com/t/3551aa4f562f4b79b93204b11ae640b4).
 
