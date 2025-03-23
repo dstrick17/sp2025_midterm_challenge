@@ -10,6 +10,7 @@ import pandas as pd
 from tqdm.auto import tqdm  # For progress bars
 import wandb
 import json
+#################################################################################
 from torch.utils.data import random_split, DataLoader
 
 class SimpleCNN(nn.Module):
@@ -21,23 +22,26 @@ class SimpleCNN(nn.Module):
         # Reduce the image by 2
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        # Second convolutional layer with an input of 32 channels and an output of 64 channels and 3x3 kernel
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        # Second convolutional layer with an input of 32 channels and an output of 64 channels and 3x3 kerne;
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding = 1)
         self.relu2 = nn.ReLU()
         # Reduce the image by 2
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-
-        # Fully connected layer: CIFAR-10 images are 32x32 pixels
-        self.fc1 = nn.Linear(in_features=64 * 8 * 8, out_features=100)
-
+  
+        # Fuly conected layer: CIFAR-10 images are 32x32 pixels
+        self.fc1 = nn.Linear(in_features=64 * 8 * 8, out_features= 100)
+        # Add ReLU activation
+        self.relu3 = nn.ReLU()        
+        # Map 100 features to the 100 CIFAR-100 classes
+        self.fc2 = nn.Linear(in_features=100, out_features=100)
     def forward(self, x):
         x = self.pool1(self.relu1(self.conv1(x)))
         x = self.pool2(self.relu2(self.conv2(x)))
         # torch.flatten converts 3D tensor into 1D vector so it can go into fully connected layer
         x = torch.flatten(x, start_dim=1)
-        x = self.fc1(x)
-
-
+        x = self.fc1(x)     # Extract features
+        x = self.relu3(x)   # Apply non-linearity (use self.relu3, not F.relu3)
+        x = self.fc2(x)     # Make final class predictions
         return x
 
 ################################################################################
@@ -60,30 +64,27 @@ def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
         # move inputs and labels to the target device
         inputs, labels = inputs.to(device), labels.to(device)
 
-# Reset gradients to zero - clears old gradients from the last step so the gradients don't accumulate
-optimizer.zero_grad()
+        #reset gradients to zero - clears old gradients from the last step so the gradients don't accumulate
+        optimizer.zero_grad()
+        # FOrward pass to get predictions
+        outputs = model(inputs)
+        # Calculate loss function (compare predictions with true labels)
+        loss = criterion(outputs, labels)
 
-# Forward pass to get predictions
-outputs = model(inputs)
+        # Backpropagation
+        loss.backward()
+        # Update weights - adjust model paramenters using computed gradients
+        optimizer.step()
 
-# Calculate loss function (compare predictions with true labels)
-loss = criterion(outputs, labels)
+        # calculate loss
+        running_loss += loss.item()
+        # Get predicted class which is teh lass with the highest score
+        _, predicted = outputs.max(1)
 
-# Backpropagation
-loss.backward()
+        total += labels.size(0) # Update total number of images
+        correct += predicted.eq(labels).sum().item() # Count correct predictions
 
-# Update weights - adjust model parameters using computed gradients
-optimizer.step()
-
-# Calculate loss
-running_loss += loss.item()
-
-# Get predicted class, which is the class with the highest score
-_, predicted = outputs.max(1)
-
-total += labels.size(0)  # Update total number of images
-correct += predicted.eq(labels).sum().item()  # Count correct predictions
-
+        # Update progress bar
         progress_bar.set_postfix({"loss": running_loss / (i + 1), "acc": 100. * correct / total})
 
     train_loss = running_loss / len(trainloader)
@@ -112,13 +113,11 @@ def validate(model, valloader, criterion, device):
             # move inputs and labels to the target device
             inputs, labels = inputs.to(device), labels.to(device)
 
-
             outputs = model(inputs) ##inference
             loss = criterion(outputs, labels)  #loss calculation
 
             running_loss += loss.item()  ### add loss from this sample
             _, predicted = outputs.max(1)   # predict the class
-
 
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
@@ -143,7 +142,7 @@ def main():
     CONFIG = {
         "model": "MyModel",   # Change name when using a different model
         "batch_size": 8, # run batch size finder to find optimal batch size
-        "learning_rate": 0.1,
+        "learning_rate": 0.005,
         "epochs": 5,  # Train for longer in a real scenario
         "num_workers": 4, # Adjust based on your system
         "device": "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu",
@@ -166,7 +165,6 @@ def main():
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), # Example normalization
     ])
 
-
     transform_test = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -181,7 +179,6 @@ def main():
                                             download=True, transform=transform_train)
 
     # Split train into train and validation (80/20 split)
-
     train_size = int(0.8 * len(trainset))
     val_size = len(trainset) - train_size
     trainset, valset = random_split(trainset, [train_size, val_size])
@@ -193,14 +190,11 @@ def main():
     #  (Create validation and test loaders)
     testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
     testloader = DataLoader(testset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
-
     
     ############################################################################
     #   Instantiate model and move to target device
     ############################################################################
-
     model = SimpleCNN()
-
     model = model.to(CONFIG["device"])   # move it to target device
 
     print("\nModel summary:")
@@ -221,14 +215,12 @@ def main():
     ############################################################################
     # Loss Function, Optimizer and optional learning rate scheduler
     ############################################################################
-
     # Cross Enropy Loss for image classification tasks
     criterion = nn.CrossEntropyLoss()
     # Try out Adam optimizer
     optimizer = optim.Adam(model.parameters(), lr=CONFIG["learning_rate"])
     # Add a scheduler   #optionally add a LR scheduler
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1) 
-
 
 
     # Initialize wandb
