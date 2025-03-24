@@ -10,43 +10,10 @@ import pandas as pd
 from tqdm.auto import tqdm  # For progress bars
 import wandb
 import json
-#################################################################################
 from torch.utils.data import random_split, DataLoader
+import torchvision.models as models
 
-class SimpleCNN(nn.Module):
-    def __init__(self):
-        super(SimpleCNN, self).__init__()
-        # First convolutional layer has an input of 3 channels, and output of 32 channels, and a 3x3 kernel
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1)
-        self.relu1 = nn.ReLU()
-        # Reduce the image by 2
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-
-        # Second convolutional layer with an input of 32 channels and an output of 64 channels and 3x3 kerne;
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding = 1)
-        self.relu2 = nn.ReLU()
-        # Reduce the image by 2
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-  
-        # Fuly conected layer: CIFAR-10 images are 32x32 pixels
-        self.fc1 = nn.Linear(in_features=64 * 8 * 8, out_features= 100)
-        # Add ReLU activation
-        self.relu3 = nn.ReLU()        
-        # Map 100 features to the 100 CIFAR-100 classes
-        self.fc2 = nn.Linear(in_features=100, out_features=100)
-    def forward(self, x):
-        x = self.pool1(self.relu1(self.conv1(x)))
-        x = self.pool2(self.relu2(self.conv2(x)))
-        # torch.flatten converts 3D tensor into 1D vector so it can go into fully connected layer
-        x = torch.flatten(x, start_dim=1)
-        x = self.fc1(x)     # Extract features
-        x = self.relu3(x)   # Apply non-linearity (use self.relu3, not F.relu3)
-        x = self.fc2(x)     # Make final class predictions
-        return x
-
-################################################################################
-# Define a one epoch training function
-################################################################################
+### Define a one epoch training function
 def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     """Train one epoch, e.g. all batches of one epoch."""
     device = CONFIG["device"]
@@ -91,10 +58,7 @@ def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     train_acc = 100. * correct / total
     return train_loss, train_acc
 
-
-################################################################################
-# Define a validation function
-################################################################################
+###
 def validate(model, valloader, criterion, device):
     """Validate the model"""
     model.eval() # Set to evaluation
@@ -128,24 +92,16 @@ def validate(model, valloader, criterion, device):
     val_acc = 100. * correct / total
     return val_loss, val_acc
 
-
+###
 def main():
-
-    ############################################################################
-    #    Configuration Dictionary (Modify as needed)
-    ############################################################################
-    # It's convenient to put all the configuration in a dictionary so that we have
-    # one place to change the configuration.
-    # It's also convenient to pass to our experiment tracking tool.
-
 
     CONFIG = {
         "model": "MyModel",   # Change name when using a different model
-        "batch_size": 8, # run batch size finder to find optimal batch size
+        "batch_size": 40, # run batch size finder to find optimal batch size
         "learning_rate": 0.005,
         "epochs": 5,  # Train for longer in a real scenario
         "num_workers": 4, # Adjust based on your system
-        "device": "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu",
+        "device": "cuda" if torch.cuda.is_available() else "cpu",
         "data_dir": "./data",  # Make sure this directory exists
         "ood_dir": "./data/ood-test",
         "wandb_project": "sp25-ds542-challenge",
@@ -156,25 +112,21 @@ def main():
     print("\nCONFIG Dictionary:")
     pprint.pprint(CONFIG)
 
-    ############################################################################
-    #      Data Transformation (Example - You might want to modify) 
-    ############################################################################
-
+    #      Data Transformation (MOdified for DenseNet) 
     transform_train = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
         transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), # Example normalization
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-
     transform_test = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
         transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-
-    ############################################################################
     #       Data Loading
-    ############################################################################
-
     trainset = torchvision.datasets.CIFAR100(root='./data', train=True,
                                             download=True, transform=transform_train)
 
@@ -191,11 +143,19 @@ def main():
     testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
     testloader = DataLoader(testset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
     
-    ############################################################################
-    #   Instantiate model and move to target device
-    ############################################################################
-    model = SimpleCNN()
-    model = model.to(CONFIG["device"])   # move it to target device
+
+
+###    Instantiate model and move to target device
+    # Load pretrained Densenet model
+    model = models.resnet50(weights=None)
+
+    # Make sure fully connectled layer fits CIFAR-100 imaging
+    num_ftrs = model.fc.in_features
+    # Make sure it fits 100 features for hte CIFAR-100 dataset
+    model.fc = nn.Linear(num_ftrs, 100)
+    
+    # move it to target device
+    model = model.to(CONFIG["device"])   
 
     print("\nModel summary:")
     print(f"{model}\n")
@@ -212,24 +172,23 @@ def main():
         print(f"Using batch size: {CONFIG['batch_size']}")
     
 
-    ############################################################################
-    # Loss Function, Optimizer and optional learning rate scheduler
-    ############################################################################
+
+
+### Loss Function, Optimizer and optional learning rate scheduler
     # Cross Enropy Loss for image classification tasks
     criterion = nn.CrossEntropyLoss()
     # Try out Adam optimizer
     optimizer = optim.Adam(model.parameters(), lr=CONFIG["learning_rate"])
     # Add a scheduler   #optionally add a LR scheduler
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1) 
-
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.1) 
 
     # Initialize wandb
     wandb.init(project="-sp25-ds542-challenge", config=CONFIG)
     wandb.watch(model)  # watch the model gradients
 
-    ############################################################################
-    # --- Training Loop (Example - Students need to complete) ---
-    ############################################################################
+
+
+### Training Loop 
     best_val_acc = 0.0
 
     for epoch in range(CONFIG["epochs"]):
@@ -255,9 +214,9 @@ def main():
 
     wandb.finish()
 
-    ############################################################################
-    # Evaluation -- shouldn't have to change the following code
-    ############################################################################
+
+
+### Evaluation -- shouldn't have to change the following code
     import eval_cifar100
     import eval_ood
 
