@@ -18,29 +18,40 @@ class SimpleCNN(nn.Module):
         super(SimpleCNN, self).__init__()
         # First convolutional layer has an input of 3 channels, and output of 32 channels, and a 3x3 kernel
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1)
-        self.relu1 = nn.ReLU()
-        # Reduce the image by 2
+        self.relu1 = nn.ReLU() # Reduce the image by 2
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         # Second convolutional layer with an input of 32 channels and an output of 64 channels and 3x3 kerne;
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding = 1)
         self.relu2 = nn.ReLU()
-        # Reduce the image by 2
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-  
-        # Fuly conected layer: CIFAR-10 images are 32x32 pixels
-        self.fc1 = nn.Linear(in_features=64 * 8 * 8, out_features= 100)
-        # Add ReLU activation
-        self.relu3 = nn.ReLU()        
-        # Map 100 features to the 100 CIFAR-100 classes
-        self.fc2 = nn.Linear(in_features=100, out_features=100)
+
+        # Third convolutional layer
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding = 1)
+        self.relu3 = nn.ReLU()
+        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        # Fourth convolutional layer
+        self.conv4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding = 1)
+        self.relu4 = nn.ReLU()
+        self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+
+        # Fuly conected layer: CIFAR-10 images are 32x32 pixels 
+        self.fc1 = nn.Linear(in_features=256 * 2 * 2, out_features= 100)
+        self.relu5 = nn.ReLU() # Add ReLU activation        
+        self.fc2 = nn.Linear(in_features=100, out_features=100) # Map 100 features to the 100 CIFAR-100 classes
+
+
     def forward(self, x):
         x = self.pool1(self.relu1(self.conv1(x)))
         x = self.pool2(self.relu2(self.conv2(x)))
+        x = self.pool3(self.relu3(self.conv3(x)))
+        x = self.pool4(self.relu4(self.conv4(x)))
         # torch.flatten converts 3D tensor into 1D vector so it can go into fully connected layer
         x = torch.flatten(x, start_dim=1)
         x = self.fc1(x)     # Extract features
-        x = self.relu3(x)   # Apply non-linearity (use self.relu3, not F.relu3)
+        x = self.relu5(x)   # Apply non-linearity (use self.relu3, not F.relu3)
         x = self.fc2(x)     # Make final class predictions
         return x
 
@@ -141,8 +152,8 @@ def main():
 
     CONFIG = {
         "model": "MyModel",   # Change name when using a different model
-        "batch_size": 8, # run batch size finder to find optimal batch size
-        "learning_rate": 0.005,
+        "batch_size": 128, # run batch size finder to find optimal batch size
+        "learning_rate": 0.0005,
         "epochs": 5,  # Train for longer in a real scenario
         "num_workers": 4, # Adjust based on your system
         "device": "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu",
@@ -256,7 +267,7 @@ def main():
     wandb.finish()
 
     ############################################################################
-    # Evaluation -- shouldn't have to change the following code
+    # Evaluation
     ############################################################################
     import eval_cifar100
     import eval_ood
