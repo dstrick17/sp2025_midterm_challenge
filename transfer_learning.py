@@ -10,29 +10,10 @@ import pandas as pd
 from tqdm.auto import tqdm  # For progress bars
 import wandb
 import json
+from torch.utils.data import random_split, DataLoader
+import torchvision.models as models
 
-################################################################################
-# Model Definition (Simple Example - You need to complete)
-# For Part 1, you need to manually define a network.
-# For Part 2 you have the option of using a predefined network and
-# for Part 3 you have the option of using a predefined, pretrained network to
-# finetune.
-################################################################################
-class SimpleCNN(nn.Module):
-    def __init__(self):
-        super(SimpleCNN, self).__init__()
-        # TODO - define the layers of the network you will use
-        ...
-    
-    def forward(self, x):
-        # TODO - define the forward pass of the network you will use
-        ...
-
-        return x
-
-################################################################################
-# Define a one epoch training function
-################################################################################
+### Define a one epoch training function
 def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     """Train one epoch, e.g. all batches of one epoch."""
     device = CONFIG["device"]
@@ -50,25 +31,34 @@ def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
         # move inputs and labels to the target device
         inputs, labels = inputs.to(device), labels.to(device)
 
-        ### TODO - Your code here
-        ...
+        #reset gradients to zero - clears old gradients from the last step so the gradients don't accumulate
+        optimizer.zero_grad()
+        # FOrward pass to get predictions
+        outputs = model(inputs)
+        # Calculate loss function (compare predictions with true labels)
+        loss = criterion(outputs, labels)
 
-        running_loss += ...   ### TODO
-        _, predicted = ...    ### TODO
+        # Backpropagation
+        loss.backward()
+        # Update weights - adjust model paramenters using computed gradients
+        optimizer.step()
 
-        total += labels.size(0)
-        correct += predicted.eq(labels).sum().item()
+        # calculate loss
+        running_loss += loss.item()
+        # Get predicted class which is teh lass with the highest score
+        _, predicted = outputs.max(1)
 
+        total += labels.size(0) # Update total number of images
+        correct += predicted.eq(labels).sum().item() # Count correct predictions
+
+        # Update progress bar
         progress_bar.set_postfix({"loss": running_loss / (i + 1), "acc": 100. * correct / total})
 
     train_loss = running_loss / len(trainloader)
     train_acc = 100. * correct / total
     return train_loss, train_acc
 
-
-################################################################################
-# Define a validation function
-################################################################################
+###-----------------------------------------------------------------------------------------------
 def validate(model, valloader, criterion, device):
     """Validate the model"""
     model.eval() # Set to evaluation
@@ -87,11 +77,11 @@ def validate(model, valloader, criterion, device):
             # move inputs and labels to the target device
             inputs, labels = inputs.to(device), labels.to(device)
 
-            outputs = ... ### TODO -- inference
-            loss = ...    ### TODO -- loss calculation
+            outputs = model(inputs) ##inference
+            loss = criterion(outputs, labels)  #loss calculation
 
-            running_loss += ...  ### SOLUTION -- add loss from this sample
-            _, predicted = ...   ### SOLUTION -- predict the class
+            running_loss += loss.item()  ### add loss from this sample
+            _, predicted = outputs.max(1)   # predict the class
 
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
@@ -102,24 +92,16 @@ def validate(model, valloader, criterion, device):
     val_acc = 100. * correct / total
     return val_loss, val_acc
 
-
+###
 def main():
-
-    ############################################################################
-    #    Configuration Dictionary (Modify as needed)
-    ############################################################################
-    # It's convenient to put all the configuration in a dictionary so that we have
-    # one place to change the configuration.
-    # It's also convenient to pass to our experiment tracking tool.
-
 
     CONFIG = {
         "model": "MyModel",   # Change name when using a different model
-        "batch_size": 8, # run batch size finder to find optimal batch size
-        "learning_rate": 0.1,
-        "epochs": 5,  # Train for longer in a real scenario
-        "num_workers": 4, # Adjust based on your system
-        "device": "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu",
+        "batch_size": 128, # run batch size finder to find optimal batch size
+        "learning_rate": 0.0007,
+        "epochs": 20,  # Train for longer in a real scenario
+        "num_workers": 8, # Adjust based on your system
+        "device": "cuda" if torch.cuda.is_available() else "cpu",
         "data_dir": "./data",  # Make sure this directory exists
         "ood_dir": "./data/ood-test",
         "wandb_project": "sp25-ds542-challenge",
@@ -130,47 +112,49 @@ def main():
     print("\nCONFIG Dictionary:")
     pprint.pprint(CONFIG)
 
-    ############################################################################
-    #      Data Transformation (Example - You might want to modify) 
-    ############################################################################
-
+    #      Data Transformation (MOdified for ResNet) Only augment training data, not test data
     transform_train = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), # Example normalization
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-    ###############
-    # TODO Add validation and test transforms - NO augmentation for validation/test
-    ###############
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
 
-    # Validation and test transforms (NO augmentation)
-    transform_test = ...   ### TODO -- BEGIN SOLUTION
 
-    ############################################################################
+
     #       Data Loading
-    ############################################################################
-
     trainset = torchvision.datasets.CIFAR100(root='./data', train=True,
                                             download=True, transform=transform_train)
 
     # Split train into train and validation (80/20 split)
-    train_size = ...   ### TODO -- Calculate training set size
-    val_size = ...     ### TODO -- Calculate validation set size
-    trainset, valset = ...  ### TODO -- split into training and validation sets
+    train_size = int(0.8 * len(trainset))
+    val_size = len(trainset) - train_size
+    trainset, valset = random_split(trainset, [train_size, val_size])
 
-    ### TODO -- define loaders and test set
-    trainloader = ...
-    valloader = ...
+    #efine loaders and test set
+    trainloader = DataLoader(trainset, batch_size=CONFIG["batch_size"], shuffle=True, num_workers=CONFIG["num_workers"])
+    valloader = DataLoader(valset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
 
-    # ... (Create validation and test loaders)
-    testset = ...
-    testloader = ...
+    #  (Create validation and test loaders)
+    testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
+    testloader = DataLoader(testset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
     
-    ############################################################################
-    #   Instantiate model and move to target device
-    ############################################################################
-    model = ...   # instantiate your model ### TODO
-    model = model.to(CONFIG["device"])   # move it to target device
+
+
+###    Instantiate model and move to target device
+    # Load pretrained Densenet model
+    model = models.resnet50(weights='IMAGENET1K_V1')
+
+    # Make sure fully connectled layer fits CIFAR-100 imaging
+    num_ftrs = model.fc.in_features
+    # Make sure it fits 100 features for hte CIFAR-100 dataset
+    model.fc = nn.Linear(num_ftrs, 100)
+    
+    # move it to target device
+    model = model.to(CONFIG["device"])   
 
     print("\nModel summary:")
     print(f"{model}\n")
@@ -187,21 +171,23 @@ def main():
         print(f"Using batch size: {CONFIG['batch_size']}")
     
 
-    ############################################################################
-    # Loss Function, Optimizer and optional learning rate scheduler
-    ############################################################################
-    criterion = ...   ### TODO -- define loss criterion
-    optimizer = ...   ### TODO -- define optimizer
-    scheduler = ...  # Add a scheduler   ### TODO -- you can optionally add a LR scheduler
 
+
+### Loss Function, Optimizer and optional learning rate scheduler
+    # Cross Enropy Loss for image classification tasks
+    criterion = nn.CrossEntropyLoss()
+    # Try out Adam optimizer
+    optimizer = optim.Adam(model.parameters(), lr=CONFIG["learning_rate"])
+    # Add a scheduler   #optionally add a LR scheduler
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.1) 
 
     # Initialize wandb
     wandb.init(project="-sp25-ds542-challenge", config=CONFIG)
     wandb.watch(model)  # watch the model gradients
 
-    ############################################################################
-    # --- Training Loop (Example - Students need to complete) ---
-    ############################################################################
+
+
+### Training Loop 
     best_val_acc = 0.0
 
     for epoch in range(CONFIG["epochs"]):
@@ -227,9 +213,9 @@ def main():
 
     wandb.finish()
 
-    ############################################################################
-    # Evaluation -- shouldn't have to change the following code
-    ############################################################################
+
+
+### Evaluation -- shouldn't have to change the following code
     import eval_cifar100
     import eval_ood
 
@@ -242,7 +228,7 @@ def main():
 
     # --- Create Submission File (OOD) ---
     submission_df_ood = eval_ood.create_ood_df(all_predictions)
-    submission_df_ood.to_csv("submission_ood.csv", index=False)
+    submission_df_ood.to_csv("submission_ood1.csv", index=False)
     print("submission_ood.csv created successfully.")
 
 if __name__ == '__main__':
