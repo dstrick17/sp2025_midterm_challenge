@@ -92,6 +92,26 @@ def validate(model, valloader, criterion, device):
     val_acc = 100. * correct / total
     return val_loss, val_acc
 
+
+### Early Stopping -- code from Claude
+class EarlyStopping:
+    def __init__(self, patience=3, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = float('inf')
+
+    def __call__(self, val_loss):
+        if val_loss < self.best_loss - self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
+
+
 ###
 def main():
 
@@ -147,6 +167,7 @@ def main():
 ###    Instantiate model and move to target device
     # Load pretrained Densenet model
     model = models.resnet50(weights='IMAGENET1K_V1')
+    # Try resnet18
 
     # Make sure fully connectled layer fits CIFAR-100 imaging
     num_ftrs = model.fc.in_features
@@ -171,8 +192,6 @@ def main():
         print(f"Using batch size: {CONFIG['batch_size']}")
     
 
-
-
 ### Loss Function, Optimizer and optional learning rate scheduler
     # Cross Enropy Loss for image classification tasks
     criterion = nn.CrossEntropyLoss()
@@ -185,7 +204,8 @@ def main():
     wandb.init(project="-sp25-ds542-challenge", config=CONFIG)
     wandb.watch(model)  # watch the model gradients
 
-
+    # Instantiate EarlyStopping before the training loop
+    early_stopper = EarlyStopping(patience=3)
 
 ### Training Loop 
     best_val_acc = 0.0
