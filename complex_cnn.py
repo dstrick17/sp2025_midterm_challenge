@@ -13,6 +13,7 @@ import json
 from torch.utils.data import random_split, DataLoader
 import torchvision.models as models
 
+
 ### Define a one epoch training function
 def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     """Train one epoch, e.g. all batches of one epoch."""
@@ -92,6 +93,25 @@ def validate(model, valloader, criterion, device):
     val_acc = 100. * correct / total
     return val_loss, val_acc
 
+### Early Stopping -- code from Claude
+class EarlyStopping:
+    def __init__(self, patience=3, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = float('inf')
+
+    def __call__(self, val_loss):
+        if val_loss < self.best_loss - self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
+
+
 ###
 def main():
 
@@ -129,8 +149,6 @@ def main():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-
-
     #       Data Loading
     trainset = torchvision.datasets.CIFAR100(root='./data', train=True,
                                             download=True, transform=transform_train)
@@ -149,11 +167,9 @@ def main():
     testloader = DataLoader(testset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
     
 
-
 ###    Instantiate model and move to target device
     # Load pretrained Densenet model
     model = models.resnet18(weights=None)
-
     # Make sure fully connectled layer fits CIFAR-100 imaging
     num_ftrs = model.fc.in_features
     # Make sure it fits 100 features for hte CIFAR-100 dataset
@@ -177,8 +193,6 @@ def main():
         print(f"Using batch size: {CONFIG['batch_size']}")
     
 
-
-
 ### Loss Function, Optimizer and optional learning rate scheduler
     # Cross Enropy Loss for image classification tasks
     criterion = nn.CrossEntropyLoss()
@@ -191,7 +205,8 @@ def main():
     wandb.init(project="-sp25-ds542-challenge", config=CONFIG)
     wandb.watch(model)  # watch the model gradients
 
-
+    # Instantiate EarlyStopping before the training loop
+    early_stopper = EarlyStopping(patience=3)
 
 ### Training Loop 
     best_val_acc = 0.0
@@ -200,6 +215,11 @@ def main():
         train_loss, train_acc = train(epoch, model, trainloader, optimizer, criterion, CONFIG)
         val_loss, val_acc = validate(model, valloader, criterion, CONFIG["device"])
         scheduler.step()
+
+        # Early stopping check inside the loop
+        if early_stopper(val_loss):
+            print("Early stopping triggered")
+            break
 
         # log to WandB
         wandb.log({
@@ -218,7 +238,6 @@ def main():
             wandb.save("best_model.pth") # Save to wandb as well
 
     wandb.finish()
-
 
 
 ### Evaluation -- shouldn't have to change the following code
