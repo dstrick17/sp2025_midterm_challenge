@@ -99,7 +99,7 @@ def main():
         "model": "MyModel",   # Change name when using a different model
         "batch_size": 128, # run batch size finder to find optimal batch size
         "learning_rate": 0.0007,
-        "epochs": 4,  # Train for longer in a real scenario
+        "epochs": 20,  # Train for longer in a real scenario
         "num_workers": 8, # Adjust based on your system
         "device": "cuda" if torch.cuda.is_available() else "cpu",
         "data_dir": "./data",  # Make sure this directory exists
@@ -115,7 +115,7 @@ def main():
     #      Data Transformation (MOdified for ResNet) Only augment training data, not test data
     transform_train = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), 
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
     transform_test = transforms.Compose([
@@ -146,7 +146,7 @@ def main():
 
 ###    Instantiate model and move to target device
     # Load pretrained Densenet model
-    model = models.resnet50(weights='IMAGENET1K_V1') # Model suggestions from claude
+    model = models.resnet50(weights='IMAGENET1K_V1')
 
     # Make sure fully connectled layer fits CIFAR-100 imaging
     num_ftrs = model.fc.in_features
