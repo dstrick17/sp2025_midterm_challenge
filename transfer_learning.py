@@ -155,6 +155,11 @@ def main():
 
     #      Data Transformation (MOdified for ResNet) Only augment training data, not test data
     transform_train = transforms.Compose([
+        transforms.RandomHorizontalFlip(p=0.5), # Randomly flip images horizontally
+        transforms.RandomRotation(degrees=15), #Rotate image randomly 15 degrees
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+        transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10),  # Advanced augmentation
+        # ONly Need these two
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
