@@ -132,7 +132,7 @@ def main():
         "model": "MyModel",   # Change name when using a different model
         "batch_size": 128, # run batch size finder to find optimal batch size
         "learning_rate": 0.00007,
-        "epochs": 20,  # Train for longer in a real scenario
+        "epochs": 4,  # Train for longer in a real scenario
         "num_workers": 8, # Adjust based on your system
         "device": "cuda" if torch.cuda.is_available() else "cpu",
         "data_dir": "./data",  # Make sure this directory exists
@@ -159,10 +159,10 @@ def main():
 
     #      Data Transformation (MOdified for ResNet) Only augment training data, not test data
     transform_train = transforms.Compose([
-        transforms.RandomHorizontalFlip(p=0.5), # Randomly flip images horizontally
-        transforms.RandomRotation(degrees=15), #Rotate image randomly 15 degrees
-        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-        transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10),  # Advanced augmentation
+        # transforms.RandomHorizontalFlip(p=0.5), # Randomly flip images horizontally
+        # transforms.RandomRotation(degrees=15), #Rotate image randomly 15 degrees
+        # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+        # transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10),  # Advanced augmentation
         # ONly Need these two
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),

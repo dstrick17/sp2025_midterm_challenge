@@ -127,8 +127,8 @@ def main():
     CONFIG = {
         "model": "MyModel",   # Change name when using a different model
         "batch_size": 128, # run batch size finder to find optimal batch size
-        "learning_rate": 0.0007,
-        "epochs": 5,  # Train for longer in a real scenario
+        "learning_rate": 0.007,
+        "epochs": 20,  # Train for longer in a real scenario
         "num_workers": 8, # Adjust based on your system
         "device": "cuda" if torch.cuda.is_available() else "cpu",
         "data_dir": "./data",  # Make sure this directory exists
@@ -138,7 +138,7 @@ def main():
     }
 
     # Load pretrained Densenet model
-    model = models.resnet18(weights='IMAGENET1K_V1') # Try resnet18
+    model = models.resnet50(weights='IMAGENET1K_V1') # Try resnet18
     device = CONFIG["device"]
     model.to(device)  # Move model to the specified device
 
