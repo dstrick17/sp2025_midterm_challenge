@@ -235,34 +235,6 @@ def main():
     wandb.init(project="-sp25-ds542-challenge", config=CONFIG)
     wandb.watch(model)  # watch the model gradients
 
-### Training Loop 
-    best_val_acc = 0.0
-
-    for epoch in range(CONFIG["epochs"]):
-        train_loss, train_acc = train(epoch, model, trainloader, optimizer, criterion, CONFIG)
-        val_loss, val_acc = validate(model, valloader, criterion, CONFIG["device"])
-        scheduler.step()
-
-        # log to WandB
-        wandb.log({
-            "epoch": epoch + 1,
-            "train_loss": train_loss,
-            "train_acc": train_acc,
-            "val_loss": val_loss,
-            "val_acc": val_acc,
-            "lr": optimizer.param_groups[0]["lr"] # Log learning rate
-        })
-
-        # Save the best model (based on validation accuracy)
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-            torch.save(model.state_dict(), "best_model.pth")
-            wandb.save("best_model.pth") # Save to wandb as well
-
-    wandb.finish()
-
-
-
 ### Evaluation -- shouldn't have to change the following code
     import eval_cifar100
     import eval_ood
@@ -278,6 +250,32 @@ def main():
     submission_df_ood = eval_ood.create_ood_df(all_predictions)
     submission_df_ood.to_csv("submission_ood1.csv", index=False)
     print("submission_ood.csv created successfully.")
+
+### Training Loop 
+    best_val_acc = 0.0
+
+    for epoch in range(CONFIG["epochs"]):
+        train_loss, train_acc = train(epoch, model, trainloader, optimizer, criterion, CONFIG)
+        val_loss, val_acc = validate(model, valloader, criterion, CONFIG["device"])
+        scheduler.step()
+
+        # log to WandB
+        wandb.log({
+            "epoch": epoch + 1,
+            "train_loss": train_loss,
+            "train_acc": train_acc,
+            "val_loss": val_loss,
+            "val_acc": val_acc,
+            "lr": optimizer.param_groups[0]["lr"], # Log learning rate
+            "cifar score%": clean_accuracy
+        })
+        # Save the best model (based on validation accuracy)
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            torch.save(model.state_dict(), "best_model.pth")
+            wandb.save("best_model.pth") # Save to wandb as well
+
+    wandb.finish()
 
 if __name__ == '__main__':
     main()
