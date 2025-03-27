@@ -12,6 +12,7 @@ import wandb
 import json
 from torch.utils.data import random_split, DataLoader
 import torchvision.models as models
+import pprint
 
 ### Define a one epoch training function
 def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
@@ -93,26 +94,34 @@ def validate(model, valloader, criterion, device):
     return val_loss, val_acc
 
 
-### Early Stopping -- code from Claude
+### Early Stopping -- code from Claude + ChatGPT
 class EarlyStopping:
     def __init__(self, patience=3, min_delta=0):
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
         self.best_loss = float('inf')
+        self.best_model_state = None  # Store best model
 
-    def __call__(self, val_loss):
+    def __call__(self, val_loss, model):
+        """Check if validation loss improved and decide whether to stop training."""
         if val_loss < self.best_loss - self.min_delta:
+            print(f"Validation loss improved: {self.best_loss:.4f} → {val_loss:.4f}")
             self.best_loss = val_loss
             self.counter = 0
+            self.best_model_state = model.state_dict()  # Save best model
         else:
             self.counter += 1
+            print(f"Early stopping counter: {self.counter}/{self.patience} (no improvement)")
+
             if self.counter >= self.patience:
-                return True
+                print(f"Early stopping triggered after {self.patience} epochs without improvement.")
+                return True  # Stop training
+
         return False
 
 
-###
+### Main Training  Loop
 def main():
 
     CONFIG = {
@@ -128,7 +137,19 @@ def main():
         "seed": 42,
     }
 
-    import pprint
+    # Load pretrained Densenet model
+    model = models.resnet50(weights='IMAGENET1K_V1') # Try resnet18
+    device = CONFIG["device"]
+    model.to(device)  # Move model to the specified device
+
+    criterion = nn.CrossEntropyLoss() # Cross Enropy Loss for image classification tasks
+    optimizer = optim.Adam(model.parameters(), lr=CONFIG["learning_rate"]) # Try out Adam optimizer
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.1) # Add a scheduler   #optionally add a LR scheduler
+
+    early_stopping = EarlyStopping(patience=3, min_delta=0.01)  # Adjust patience
+
+
+
     print("\nCONFIG Dictionary:")
     pprint.pprint(CONFIG)
 
@@ -162,12 +183,18 @@ def main():
     testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
     testloader = DataLoader(testset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
     
+    for epoch in range(CONFIG["epochs"]):
+        train_loss, train_acc = train(epoch, model, trainloader, optimizer, criterion, CONFIG)
+        val_loss, val_acc = validate(model, valloader, criterion, CONFIG["device"])
 
+        print(f"Epoch {epoch+1}: Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
+
+        # **Early stopping check**
+        if early_stopping(val_acc, model):
+            print(f"Early stopping triggered at epoch {epoch+1}")
+            break
 
 ###    Instantiate model and move to target device
-    # Load pretrained Densenet model
-    model = models.resnet50(weights='IMAGENET1K_V1')
-    # Try resnet18
 
     # Make sure fully connectled layer fits CIFAR-100 imaging
     num_ftrs = model.fc.in_features
@@ -192,20 +219,12 @@ def main():
         print(f"Using batch size: {CONFIG['batch_size']}")
     
 
-### Loss Function, Optimizer and optional learning rate scheduler
-    # Cross Enropy Loss for image classification tasks
-    criterion = nn.CrossEntropyLoss()
-    # Try out Adam optimizer
-    optimizer = optim.Adam(model.parameters(), lr=CONFIG["learning_rate"])
-    # Add a scheduler   #optionally add a LR scheduler
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.1) 
+
+    
 
     # Initialize wandb
     wandb.init(project="-sp25-ds542-challenge", config=CONFIG)
     wandb.watch(model)  # watch the model gradients
-
-    # Instantiate EarlyStopping before the training loop
-    early_stopper = EarlyStopping(patience=3)
 
 ### Training Loop 
     best_val_acc = 0.0
