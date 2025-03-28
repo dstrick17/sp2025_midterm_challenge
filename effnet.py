@@ -16,8 +16,6 @@ import pprint
 ### Specific for this model
 from torchvision.models import efficientnet_v2_l, EfficientNet_V2_L_Weights
 
-
-
 ### Define a one epoch training function
 def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     """Train one epoch, e.g. all batches of one epoch."""
@@ -125,78 +123,61 @@ class EarlyStopping:
     #     return False
 
 
-### Main Training  Loop
 def main():
-
     CONFIG = {
-        "model": "MyModel",   # Change name when using a different model
-        "batch_size": 128, # run batch size finder to find optimal batch size
+        "model": "MyModel",
+        "batch_size": 128,
         "learning_rate": 0.00007,
         "epochs": 8,  # Train for longer in a real scenario
         "num_workers": 8, # Adjust based on your system
+
         "device": "cuda" if torch.cuda.is_available() else "cpu",
-        "data_dir": "./data",  # Make sure this directory exists
+        "data_dir": "./data",
         "ood_dir": "./data/ood-test",
         "wandb_project": "sp25-ds542-challenge",
         "seed": 42,
     }
 
-    # Load pretrained EffNet model --- code from Google search with Google Gemini
-    model = efficientnet_v2_l(weights=EfficientNet_V2_L_Weights.DEFAULT) # 1. Define the model (EfficientNet-L2
-
+    # Load pretrained EfficientNet model
+    model = efficientnet_v2_l(weights=EfficientNet_V2_L_Weights.DEFAULT)
     device = CONFIG["device"]
-    model.to(device)  # Move model to the specified device
+    model.to(device)
 
-    criterion = nn.CrossEntropyLoss() # Cross Enropy Loss for image classification tasks
-    optimizer = optim.Adam(model.parameters(), lr=CONFIG["learning_rate"]) # Try out Adam optimizer
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.1) # Add a scheduler   #optionally add a LR scheduler
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=CONFIG["learning_rate"])
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.1)
+    early_stopping = EarlyStopping(patience=3, min_delta=0.01)
 
-    early_stopping = EarlyStopping(patience=3, min_delta=0.01)  # Adjust patience
-
+    # Modify the classifier for CIFAR-100
+    num_ftrs = model.classifier[1].in_features
+    model.classifier[1] = nn.Linear(num_ftrs, 100)  # Update the classifier layer
+    model = model.to(CONFIG["device"])  # Move to device again after modification
 
     print("\nCONFIG Dictionary:")
     pprint.pprint(CONFIG)
 
-    #      Data Transformation (MOdified for ResNet) Only augment training data, not test data
+    # Data Transformation
     transform_train = transforms.Compose([
-        # transforms.RandomHorizontalFlip(p=0.5), # Randomly flip images horizontally
-        # transforms.RandomRotation(degrees=15), #Rotate image randomly 15 degrees
-        # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-        # transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10),  # Advanced augmentation
-        # ONly Need these two
+        transforms.RandomHorizontalFlip(p=0.5),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-
     transform_test = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-
-
-    #       Data Loading
-    trainset = torchvision.datasets.CIFAR100(root='./data', train=True,
-                                            download=True, transform=transform_train)
-
-    # Split train into train and validation (80/20 split)
+    # Data Loading
+    trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
     train_size = int(0.8 * len(trainset))
     val_size = len(trainset) - train_size
     trainset, valset = random_split(trainset, [train_size, val_size])
-
-    #efine loaders and test set
     trainloader = DataLoader(trainset, batch_size=CONFIG["batch_size"], shuffle=True, num_workers=CONFIG["num_workers"])
     valloader = DataLoader(valset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
-
-    #  (Create validation and test loaders)
     testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
     testloader = DataLoader(testset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
-    
-    for epoch in range(CONFIG["epochs"]):
-        train_loss, train_acc = train(epoch, model, trainloader, optimizer, criterion, CONFIG)
-        val_loss, val_acc = validate(model, valloader, criterion, CONFIG["device"])
 
-        print(f"Epoch {epoch+1}: Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
+    print(f"Epoch {epoch+1}: Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
 
         # # **Early stopping check**
         # if early_stopping(val_acc, model):
@@ -229,52 +210,60 @@ def main():
 
     
     # Initialize wandb
+
     wandb.init(project="-sp25-ds542-challenge", config=CONFIG)
-    wandb.watch(model)  # watch the model gradients
+    wandb.watch(model)
 
-### Training Loop 
+    # Single Training Loop
     best_val_acc = 0.0
-
     for epoch in range(CONFIG["epochs"]):
         train_loss, train_acc = train(epoch, model, trainloader, optimizer, criterion, CONFIG)
         val_loss, val_acc = validate(model, valloader, criterion, CONFIG["device"])
         scheduler.step()
 
-        # log to WandB
+        print(f"Epoch {epoch+1}: Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
+
+        # Early stopping check (using val_acc)
+        if early_stopping(val_acc, model):
+            print(f"Early stopping triggered at epoch {epoch+1}")
+            # Load the best model state
+            model.load_state_dict(early_stopping.best_model_state)
+            break
+
+        # Log to WandB
         wandb.log({
             "epoch": epoch + 1,
             "train_loss": train_loss,
             "train_acc": train_acc,
             "val_loss": val_loss,
             "val_acc": val_acc,
-            "lr": optimizer.param_groups[0]["lr"] # Log learning rate
+            "lr": optimizer.param_groups[0]["lr"],
         })
 
         # Save the best model (based on validation accuracy)
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             torch.save(model.state_dict(), "best_model.pth")
-            wandb.save("best_model.pth") # Save to wandb as well
+            wandb.save("best_model.pth")
 
-    wandb.finish()
-
-
-
-### Evaluation -- shouldn't have to change the following code
+    # Evaluation After Training
     import eval_cifar100
     import eval_ood
 
-    # --- Evaluation on Clean CIFAR-100 Test Set ---
+    # Evaluate on Clean CIFAR-100 Test Set
     predictions, clean_accuracy = eval_cifar100.evaluate_cifar100_test(model, testloader, CONFIG["device"])
     print(f"Clean CIFAR-100 Test Accuracy: {clean_accuracy:.2f}%")
+    wandb.log({"cifar_score%": clean_accuracy})  # Log final test accuracy
 
-    # --- Evaluation on OOD ---
+    # Evaluate on OOD
     all_predictions = eval_ood.evaluate_ood_test(model, CONFIG)
 
-    # --- Create Submission File (OOD) ---
+    # Create Submission File (OOD)
     submission_df_ood = eval_ood.create_ood_df(all_predictions)
     submission_df_ood.to_csv("submission_ood1.csv", index=False)
     print("submission_ood.csv created successfully.")
+
+    wandb.finish()
 
 if __name__ == '__main__':
     main()
