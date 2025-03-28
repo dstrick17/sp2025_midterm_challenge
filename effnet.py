@@ -107,22 +107,22 @@ class EarlyStopping:
         self.best_loss = float('inf')
         self.best_model_state = None  # Store best model
 
-    def __call__(self, val_loss, model):
-        """Check if validation loss improved and decide whether to stop training."""
-        if val_loss < self.best_loss - self.min_delta:
-            print(f"Validation loss improved: {self.best_loss:.4f} → {val_loss:.4f}")
-            self.best_loss = val_loss
-            self.counter = 0
-            self.best_model_state = model.state_dict()  # Save best model
-        else:
-            self.counter += 1
-            print(f"Early stopping counter: {self.counter}/{self.patience} (no improvement)")
+    # def __call__(self, val_loss, model):
+    #     """Check if validation loss improved and decide whether to stop training."""
+    #     if val_loss < self.best_loss - self.min_delta:
+    #         print(f"Validation loss improved: {self.best_loss:.4f} → {val_loss:.4f}")
+    #         self.best_loss = val_loss
+    #         self.counter = 0
+    #         self.best_model_state = model.state_dict()  # Save best model
+    #     else:
+    #         self.counter += 1
+    #         print(f"Early stopping counter: {self.counter}/{self.patience} (no improvement)")
 
-            if self.counter >= self.patience:
-                print(f"Early stopping triggered after {self.patience} epochs without improvement.")
-                return True  # Stop training
+    #         if self.counter >= self.patience:
+    #             print(f"Early stopping triggered after {self.patience} epochs without improvement.")
+    #             return True  # Stop training
 
-        return False
+    #     return False
 
 
 ### Main Training  Loop
@@ -132,7 +132,7 @@ def main():
         "model": "MyModel",   # Change name when using a different model
         "batch_size": 128, # run batch size finder to find optimal batch size
         "learning_rate": 0.00007,
-        "epochs": 4,  # Train for longer in a real scenario
+        "epochs": 8,  # Train for longer in a real scenario
         "num_workers": 8, # Adjust based on your system
         "device": "cuda" if torch.cuda.is_available() else "cpu",
         "data_dir": "./data",  # Make sure this directory exists
@@ -198,10 +198,10 @@ def main():
 
         print(f"Epoch {epoch+1}: Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
 
-        # **Early stopping check**
-        if early_stopping(val_acc, model):
-            print(f"Early stopping triggered at epoch {epoch+1}")
-            break
+        # # **Early stopping check**
+        # if early_stopping(val_acc, model):
+        #     print(f"Early stopping triggered at epoch {epoch+1}")
+        #     break
 
 ###    Instantiate model and move to target device
 
@@ -226,11 +226,8 @@ def main():
         optimal_batch_size = find_optimal_batch_size(model, trainset, CONFIG["device"], CONFIG["num_workers"])
         CONFIG["batch_size"] = optimal_batch_size
         print(f"Using batch size: {CONFIG['batch_size']}")
-    
-
 
     
-
     # Initialize wandb
     wandb.init(project="-sp25-ds542-challenge", config=CONFIG)
     wandb.watch(model)  # watch the model gradients
