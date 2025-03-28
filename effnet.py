@@ -16,8 +16,6 @@ import pprint
 ### Specific for this model
 from torchvision.models import efficientnet_v2_l, EfficientNet_V2_L_Weights
 
-
-
 ### Define a one epoch training function
 def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     """Train one epoch, e.g. all batches of one epoch."""
@@ -107,22 +105,22 @@ class EarlyStopping:
         self.best_loss = float('inf')
         self.best_model_state = None  # Store best model
 
-    def __call__(self, val_loss, model):
-        """Check if validation loss improved and decide whether to stop training."""
-        if val_loss < self.best_loss - self.min_delta:
-            print(f"Validation loss improved: {self.best_loss:.4f} → {val_loss:.4f}")
-            self.best_loss = val_loss
-            self.counter = 0
-            self.best_model_state = model.state_dict()  # Save best model
-        else:
-            self.counter += 1
-            print(f"Early stopping counter: {self.counter}/{self.patience} (no improvement)")
+    # def __call__(self, val_loss, model):
+    #     """Check if validation loss improved and decide whether to stop training."""
+    #     if val_loss < self.best_loss - self.min_delta:
+    #         print(f"Validation loss improved: {self.best_loss:.4f} → {val_loss:.4f}")
+    #         self.best_loss = val_loss
+    #         self.counter = 0
+    #         self.best_model_state = model.state_dict()  # Save best model
+    #     else:
+    #         self.counter += 1
+    #         print(f"Early stopping counter: {self.counter}/{self.patience} (no improvement)")
 
-            if self.counter >= self.patience:
-                print(f"Early stopping triggered after {self.patience} epochs without improvement.")
-                return True  # Stop training
+    #         if self.counter >= self.patience:
+    #             print(f"Early stopping triggered after {self.patience} epochs without improvement.")
+    #             return True  # Stop training
 
-        return False
+    #     return False
 
 
 def main():
@@ -130,8 +128,9 @@ def main():
         "model": "MyModel",
         "batch_size": 128,
         "learning_rate": 0.00007,
-        "epochs": 4,
-        "num_workers": 8,
+        "epochs": 8,  # Train for longer in a real scenario
+        "num_workers": 8, # Adjust based on your system
+
         "device": "cuda" if torch.cuda.is_available() else "cpu",
         "data_dir": "./data",
         "ood_dir": "./data/ood-test",
@@ -178,7 +177,40 @@ def main():
     testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
     testloader = DataLoader(testset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
 
-    # Initialize WandB
+    print(f"Epoch {epoch+1}: Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
+
+        # # **Early stopping check**
+        # if early_stopping(val_acc, model):
+        #     print(f"Early stopping triggered at epoch {epoch+1}")
+        #     break
+
+###    Instantiate model and move to target device
+
+    # Make sure fully connectled layer fits CIFAR-100 imaging
+    num_ftrs = model.classifier[1].in_features # Line changed to fit the EfficientNet model
+    # Make sure it fits 100 features for hte CIFAR-100 dataset
+    model.fc = nn.Linear(num_ftrs, 100)
+    
+    # move it to target device
+    model = model.to(CONFIG["device"])   
+
+    print("\nModel summary:")
+    print(f"{model}\n")
+
+    # The following code you can run once to find the batch size that gives you the fastest throughput.
+    # You only have to do this once for each machine you use, then you can just
+    # set it in CONFIG.
+    SEARCH_BATCH_SIZES = False
+    if SEARCH_BATCH_SIZES:
+        from utils import find_optimal_batch_size
+        print("Finding optimal batch size...")
+        optimal_batch_size = find_optimal_batch_size(model, trainset, CONFIG["device"], CONFIG["num_workers"])
+        CONFIG["batch_size"] = optimal_batch_size
+        print(f"Using batch size: {CONFIG['batch_size']}")
+
+    
+    # Initialize wandb
+
     wandb.init(project="-sp25-ds542-challenge", config=CONFIG)
     wandb.watch(model)
 
