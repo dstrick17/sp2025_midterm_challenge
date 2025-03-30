@@ -137,9 +137,9 @@ def main():
     transform_train = transforms.Compose([
         # ---------DO NOT RESIZE #transforms.Resize(256),
         # transforms.RandomHorizontalFlip(p=0.5), # Randomly flip images horizontally
-        # transforms.RandomRotation(degrees=15), #Rotate image randomly 15 degrees
+        transforms.RandomRotation(degrees=15), #Rotate image randomly 15 degrees
         # ---------- DO NOT CROP #transforms.RandomCrop(224, padding=4), # Randomly crop the image to 224x2 with padding of 4
-        # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
         # transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10),  # Advanced augmentation
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -170,7 +170,7 @@ def main():
 
 ###    Instantiate model and move to target device
     # Load pretrained Densenet model
-    model = models.resnet18(weights=None)
+    model = models.resnet50(weights=False)
     # Make sure fully connectled layer fits CIFAR-100 imaging
     num_ftrs = model.fc.in_features
     # Make sure it fits 100 features for hte CIFAR-100 dataset
@@ -247,7 +247,8 @@ def main():
         "train_acc": train_acc,
         "val_loss": val_loss,
         "val_acc": val_acc,
-        "lr": optimizer.param_groups[0]["lr"] # Log learning rate
+        "lr": optimizer.param_groups[0]["lr"], # Log learning rate
+        "cifar_score%": clean_accuracy
     })
 
     # Save the best model (based on validation accuracy)
