@@ -6,3 +6,4 @@ numpy
 pandas
 matplotlib
 sam-pytorch
+cifar_resne

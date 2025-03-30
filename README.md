@@ -64,6 +64,8 @@ In addition to the code, we require a short report that includes:
     * Enumerate in detail which parts of the code were written by you and which were written with AI assistance.
     * Have detailed code comments explaining what every part of your code does. This can be in the codebase itself.
     * **Failure to disclose how you used AI may result in a score of 0 for the assignment.**
+    My simple_cnn was built with as little AI as possible. I generally googled forms but did ask ChatGPT for help. I specifically prompted GPT to teach me rather than just give me the answers. I hope to build ML models for a career and and I tryly want to learn rather than just 
+
 * **Model Description:** Detailed explanation of the chosen architecture, including justifications for design choices.
 * **Hyperparameter Tuning:** Description of the hyperparameter search process and the final chosen values.
 * **Regularization Techniques:** Explanation of the regularization methods used and their impact.

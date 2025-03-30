@@ -1,0 +1,6 @@
+
+
+EffNet-L2 (SAM): Achieves a high accuracy of 96.08%. 
+Swin-L + ML-Decoder: Reaches a strong accuracy of 95.1%. 
+µ2Net (ViT-L/16): Also performs well with an accuracy of 94.95%. 
+ViT-B-16 (ImageNet-21K-P pretrain): Another strong contender with an accuracy of 94.2%. 
