@@ -13,7 +13,9 @@ import json
 from torch.utils.data import random_split, DataLoader
 import torchvision.models as models
 
-### Define a one epoch training function
+################################################################################
+# Define a one epoch training function
+################################################################################
 def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     """Train one epoch, e.g. all batches of one epoch."""
     device = CONFIG["device"]
@@ -58,7 +60,9 @@ def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     train_acc = 100. * correct / total
     return train_loss, train_acc
 
-###-----------------------------------------------------------------------------------------------
+################################################################################
+# Define a validation function
+################################################################################
 def validate(model, valloader, criterion, device):
     """Validate the model"""
     model.eval() # Set to evaluation
@@ -92,7 +96,9 @@ def validate(model, valloader, criterion, device):
     val_acc = 100. * correct / total
     return val_loss, val_acc
 
-###
+############################################################################
+#    Configuration Dictionary 
+############################################################################
 def main():
 
     CONFIG = {
@@ -112,7 +118,9 @@ def main():
     print("\nCONFIG Dictionary:")
     pprint.pprint(CONFIG)
 
-    #      Data Transformation (MOdified for ResNet) Only augment training data, not test data
+    ############################################################################
+    #      Data Transformation 
+    ############################################################################
     transform_train = transforms.Compose([
         transforms.RandomRotation(degrees=15), #Rotate image randomly 15 degrees
         transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
@@ -126,8 +134,9 @@ def main():
     ])
 
 
-
+    ############################################################################
     #       Data Loading
+    ############################################################################
     trainset = torchvision.datasets.CIFAR100(root='./data', train=True,
                                             download=True, transform=transform_train)
 
@@ -146,7 +155,9 @@ def main():
     
 
 
-###    Instantiate model and move to target device
+    ############################################################################
+    #   Instantiate model and move to target device
+    ############################################################################
     # Load pretrained Densenet model
     model = models.resnet50(weights='IMAGENET1K_V1')
 
@@ -171,11 +182,10 @@ def main():
         optimal_batch_size = find_optimal_batch_size(model, trainset, CONFIG["device"], CONFIG["num_workers"])
         CONFIG["batch_size"] = optimal_batch_size
         print(f"Using batch size: {CONFIG['batch_size']}")
-    
 
-
-
-### Loss Function, Optimizer and optional learning rate scheduler
+    ############################################################################
+    # Loss Function, Optimizer and optional learning rate scheduler
+    ############################################################################
     # Cross Enropy Loss for image classification tasks
     criterion = nn.CrossEntropyLoss()
     # Try out Adam optimizer
@@ -189,7 +199,9 @@ def main():
 
 
 
-### Training Loop 
+    ############################################################################
+    # --- Training Loop
+    ############################################################################ 
     best_val_acc = 0.0
 
     for epoch in range(CONFIG["epochs"]):
@@ -197,11 +209,9 @@ def main():
         val_loss, val_acc = validate(model, valloader, criterion, CONFIG["device"])
         scheduler.step()
 
-
-
-
-
-### Evaluation -- shouldn't have to change the following code
+    ############################################################################
+    # Evaluation
+    ############################################################################
     import eval_cifar100
     import eval_ood
 

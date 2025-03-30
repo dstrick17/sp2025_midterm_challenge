@@ -14,8 +14,10 @@ from torch.utils.data import random_split, DataLoader
 import torchvision.models as models
 
 
-### Train --------------------------------------------------------------------
+################################################################################
 # Define a one epoch training function
+################################################################################
+
 def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     """Train one epoch, e.g. all batches of one epoch."""
     device = CONFIG["device"]
@@ -60,7 +62,9 @@ def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
     train_acc = 100. * correct / total
     return train_loss, train_acc
 
-###-----------------------------------------------------------------------------------------------
+################################################################################
+# Define a validation function
+################################################################################
 def validate(model, valloader, criterion, device):
     """Validate the model"""
     model.eval() # Set to evaluation
@@ -113,7 +117,9 @@ class EarlyStopping:
         return False
 
 
-### ----------------------------------------------------------------------------------
+############################################################################
+#    Configuration Dictionary 
+############################################################################
 def main():
 
     CONFIG = {
@@ -133,7 +139,10 @@ def main():
     print("\nCONFIG Dictionary:")
     pprint.pprint(CONFIG)
 
-    #      Data Transformation (MOdified for ResNet) Only augment training data, not test data
+    ############################################################################
+    #      Data Transformation 
+    ############################################################################
+    #   (Modified for ResNet) Only augment training data, not test data
     transform_train = transforms.Compose([
         # ---------DO NOT RESIZE #transforms.Resize(256),
         # transforms.RandomHorizontalFlip(p=0.5), # Randomly flip images horizontally
@@ -150,7 +159,10 @@ def main():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
+
+    ############################################################################
     #       Data Loading
+    ############################################################################
     trainset = torchvision.datasets.CIFAR100(root='./data', train=True,
                                             download=True, transform=transform_train)
 
@@ -168,7 +180,9 @@ def main():
     testloader = DataLoader(testset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
     
 
-###    Instantiate model and move to target device
+    ############################################################################
+    #   Instantiate model and move to target device
+    ############################################################################
     # Load pretrained Densenet model
     model = models.resnet50(weights=False)
     # Make sure fully connectled layer fits CIFAR-100 imaging
@@ -193,8 +207,9 @@ def main():
         CONFIG["batch_size"] = optimal_batch_size
         print(f"Using batch size: {CONFIG['batch_size']}")
     
-
-### Loss Function, Optimizer and optional learning rate scheduler
+    ############################################################################
+    # Loss Function, Optimizer and optional learning rate scheduler
+    ############################################################################
     # Cross Enropy Loss for image classification tasks
     criterion = nn.CrossEntropyLoss()
     # Try out Adam optimizer
@@ -209,7 +224,9 @@ def main():
     # Instantiate EarlyStopping before the training loop
     early_stopper = EarlyStopping(patience=3)
 
-### Training Loop 
+    ############################################################################
+    # --- Training Loop
+    ############################################################################ 
     best_val_acc = 0.0
 
     for epoch in range(CONFIG["epochs"]):
@@ -222,9 +239,9 @@ def main():
             print("Early stopping triggered")
             break
 
-
-
-### Evaluation -- shouldn't have to change the following code
+    ############################################################################
+    # Evaluation
+    ############################################################################
     import eval_cifar100
     import eval_ood
 

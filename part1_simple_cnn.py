@@ -135,17 +135,10 @@ def validate(model, valloader, criterion, device):
     val_loss = running_loss/len(valloader)
     val_acc = 100. * correct / total
     return val_loss, val_acc
-
-
+############################################################################
+#    Configuration Dictionary 
+############################################################################
 def main():
-
-    ############################################################################
-    #    Configuration Dictionary (Modify as needed)
-    ############################################################################
-    # It's convenient to put all the configuration in a dictionary so that we have
-    # one place to change the configuration.
-    # It's also convenient to pass to our experiment tracking tool.
-
 
     CONFIG = {
         "model": "simple_cnn.py",   # Change name when using a different model
@@ -165,7 +158,7 @@ def main():
     pprint.pprint(CONFIG)
 
     ############################################################################
-    #      Data Transformation (Example - You might want to modify) 
+    #      Data Transformation 
     ############################################################################
 
     transform_train = transforms.Compose([
@@ -239,7 +232,7 @@ def main():
     wandb.watch(model)  # watch the model gradients
 
     ############################################################################
-    # --- Training Loop (Example - Students need to complete) ---
+    # --- Training Loop
     ############################################################################
     best_val_acc = 0.0
 
